@@ -40,7 +40,6 @@
 #include <semaphore.h>
 #include <string.h>
 
-
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <stdio.h>
@@ -48,7 +47,6 @@
 
 #include <netinet/in.h>
 #include <time.h>
-
 
 using namespace BlackLib;
 // ----------- leds trem 1 ----------
@@ -100,7 +98,7 @@ int normalizeAdc(int trem, ADC *ADC)
 
 void L(int trem, int trilho, int sleepTime)
 {
-  printf("trem %d no trilho %d, vel:%d\n", trem, trilho,sleepTime);
+  printf("trem %d no trilho %d, vel:%d\n", trem, trilho, sleepTime);
   sleep(sleepTime);
 }
 
@@ -134,19 +132,19 @@ void *trem2(void *arg)
   while (true)
   {
     int sleepTime = normalizeAdc(trem, &vel_trem2);
-    acenderLocalizacao(&l2, &l4_trem2,sleepTime);
-    L(trem, 2,sleepTime);
+    acenderLocalizacao(&l2, &l4_trem2, sleepTime);
+    L(trem, 2, sleepTime);
     pthread_mutex_lock(&t6);
-    acenderLocalizacao(&l5_trem2, &l2,sleepTime);
-    L(trem, 6,sleepTime);
+    acenderLocalizacao(&l5_trem2, &l2, sleepTime);
+    L(trem, 6, sleepTime);
     pthread_mutex_unlock(&t6);
     pthread_mutex_lock(&t9);
-    acenderLocalizacao(&l7_trem2, &l5_trem2,sleepTime);
-    L(trem, 9,sleepTime);
+    acenderLocalizacao(&l7_trem2, &l5_trem2, sleepTime);
+    L(trem, 9, sleepTime);
     pthread_mutex_unlock(&t9);
     pthread_mutex_lock(&t5);
-    acenderLocalizacao(&l4_trem2, &l7_trem2,sleepTime);
-    L(trem, 5,sleepTime);
+    acenderLocalizacao(&l4_trem2, &l7_trem2, sleepTime);
+    L(trem, 5, sleepTime);
     pthread_mutex_unlock(&t5);
   }
   pthread_exit(0);
@@ -179,7 +177,7 @@ void *trem4(void *arg)
   int trem = 4;
   while (true)
   {
-    int sleepTime =  normalizeAdc(trem, &vel_trem4);
+    int sleepTime = normalizeAdc(trem, &vel_trem4);
     acenderLocalizacao(&l9, &l9, sleepTime);
     L(trem, 13, sleepTime);
     acenderLocalizacao(&l9, &l9, sleepTime);
@@ -202,7 +200,8 @@ void *trem4(void *arg)
   pthread_exit(0);
 }
 
-void *socketServer(void* arg){
+void *socketServer(void *arg)
+{
 
   int server_sockfd;
   size_t server_len;
@@ -210,81 +209,80 @@ void *socketServer(void* arg){
   struct sockaddr_in server_address;
   struct sockaddr_in client_address;
 
-  struct ip_mreq mreq;  // para endereco multicast
+  struct ip_mreq mreq; // para endereco multicast
 
   unsigned short porta = 8109;
 
-  if ( (server_sockfd = socket(AF_INET, SOCK_DGRAM, 0) )  < 0  )  // cria um novo socket
+  if ((server_sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) // cria um novo socket
   {
-      printf(" Houve erro na ebertura do socket ");
-      exit(1);
+    printf(" Houve erro na ebertura do socket ");
+    exit(1);
   }
   server_address.sin_family = AF_INET;
   server_address.sin_addr.s_addr = htonl(INADDR_ANY);
   server_address.sin_port = htons(porta);
 
-
   server_len = sizeof(server_address);
 
-  if(  bind(server_sockfd, (struct sockaddr *) &server_address, server_len) < 0 )
+  if (bind(server_sockfd, (struct sockaddr *)&server_address, server_len) < 0)
   {
-      perror("Houve error no Bind");
-      exit(1);
+    perror("Houve error no Bind");
+    exit(1);
   }
 
   //use setsockopt() para requerer inscricap num grupo multicast
 
-  mreq.imr_multiaddr.s_addr=inet_addr(MULTICAST_ADDR);
-  mreq.imr_interface.s_addr=htonl(INADDR_ANY);
-  
-  if (setsockopt(server_sockfd,IPPROTO_IP,IP_ADD_MEMBERSHIP,&mreq,sizeof(mreq)) < 0) {
-      perror("setsockopt");
-      exit(1);
+  mreq.imr_multiaddr.s_addr = inet_addr(MULTICAST_ADDR);
+  mreq.imr_interface.s_addr = htonl(INADDR_ANY);
+
+  if (setsockopt(server_sockfd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) < 0)
+  {
+    perror("setsockopt");
+    exit(1);
   }
 
   printf(" IPPROTO_IP = %d\n", IPPROTO_IP);
   printf(" SOL_SOCKET = %d\n", SOL_SOCKET);
   printf(" IP_ADD_MEMBERSHIP = %d \n", IP_ADD_MEMBERSHIP);
 
+  int adcValues[4];
+  while (1)
+  {
 
-  while(1){
-      int valor;
-      
-      printf("Servidor esperando ...\n");
-      
-      client_len = sizeof(client_address);
-      if(recvfrom(server_sockfd, &valor, sizeof(valor),0,
-                  (struct sockaddr *) &client_address, &client_len) < 0 )
-      {
-          perror(" erro no RECVFROM( )");
-          exit(1);
-      }
-      printf(" Valor recebido foi = %d\n", valor);
-      //close(server_sockfd);
-      
-  }
-  }
+    printf("Servidor esperando ...\n");
 
-void* socketClient(void* arg){
+    client_len = sizeof(client_address);
+    if (recvfrom(server_sockfd, &adcValues, sizeof(adcValues), 0,
+                 (struct sockaddr *)&client_address, &client_len) < 0)
+    {
+      perror(" erro no RECVFROM( )");
+      exit(1);
+    }
+    printf(" Valor recebido foi = [%d %d %d %d]\n", adcValues[0], adcValues[1], adcValues[2], adcValues[3]);
+    //close(server_sockfd);
+  }
+}
+
+void *socketClient(void *arg)
+{
   int sockfd;
   int len;
   struct sockaddr_in address;
   unsigned short porta = 8109;
-    
-  sockfd  = socket(AF_INET, SOCK_DGRAM,0);  // criacao do socket
-    
+
+  sockfd = socket(AF_INET, SOCK_DGRAM, 0); // criacao do socket
+
   address.sin_family = AF_INET;
   address.sin_addr.s_addr = inet_addr(MULTICAST_ADDR);
   address.sin_port = htons(porta);
   len = sizeof(address);
-  while(1){
-  int adcValues[] = {normalizeAdc(1,&vel_trem1),normalizeAdc(2,&vel_trem2),normalizeAdc(3,&vel_trem3),normalizeAdc(4,&vel_trem4)};
-  for(int i=0;i<4;i++)
+  while (1)
   {
-      sendto(sockfd, &adcValues[i],sizeof(adcValues[i]),0,(struct sockaddr *) &address, len);
-      sleep(1);
-  }}
-  
+    int adcValues[4] = {normalizeAdc(1, &vel_trem1), normalizeAdc(2, &vel_trem2), normalizeAdc(3, &vel_trem3), normalizeAdc(4, &vel_trem4)};
+    printf("enviando\n");
+    sendto(sockfd, &adcValues, sizeof(adcValues), 0, (struct sockaddr *)&address, len);
+    sleep(1);
+  }
 }
 
 int main()
@@ -331,7 +329,7 @@ int main()
 
   srand(time(0));
   int res;
-  pthread_t thread1, thread2, thread3, thread4,thread5,thread6;
+  pthread_t thread1, thread2, thread3, thread4, thread5, thread6;
 
   void *thread_result;
 
@@ -415,7 +413,7 @@ int main()
     exit(EXIT_FAILURE);
   }
 
-    //------ Thread 6 (executa a fn: socketClient) ------
+  //------ Thread 6 (executa a fn: socketClient) ------
   res = pthread_create(&thread6, NULL, socketClient, NULL);
   if (res != 0)
   {
@@ -449,13 +447,13 @@ int main()
     exit(EXIT_FAILURE);
   }
 
-    res = pthread_join(thread5, &thread_result);
+  res = pthread_join(thread5, &thread_result);
   if (res != 0)
   {
     perror("Juncao da Thread 5 falhou");
     exit(EXIT_FAILURE);
   }
-      res = pthread_join(thread6, &thread_result);
+  res = pthread_join(thread6, &thread_result);
   if (res != 0)
   {
     perror("Juncao da Thread 6 falhou");
