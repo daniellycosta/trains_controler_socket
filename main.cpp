@@ -1,6 +1,7 @@
 //
 //  threadTrem.cpp
 //  Created by Daniel e Danielly
+// Para compilá-lo utilise: g++ -o threadTrem threadTrem.cpp -lpthread
 
 //   Os trens circulam em sentido horário entre os trilhos
 
@@ -70,10 +71,10 @@ pthread_mutex_t t10; /* proteção para o trilho 6 */
 
 #define MULTICAST_ADDR "225.0.0.37"
 
-int adcValues[4];
+int adcValues[] = {1, 1, 1, 1};
 
 void testeDeLeds();
-int normalizeAdc(int trem, ADC *ADC);
+float normalizeAdc(int trem, ADC *ADC);
 void acenderLocalizacao(BlackGPIO *loc_atual, BlackGPIO *loc_anterior, int sleepTime);
 
 void *trem1(void *arg);
@@ -212,6 +213,7 @@ int main()
     perror("Juncao da Thread 5 falhou");
     exit(EXIT_FAILURE);
   }
+
   res = pthread_join(thread6, &thread_result);
   if (res != 0)
   {
@@ -236,10 +238,12 @@ void acenderLocalizacao(BlackGPIO *loc_atual, BlackGPIO *loc_anterior, int sleep
   sleep(sleepTime);
 }
 
-int normalizeAdc(int trem, ADC *ADC)
+float normalizeAdc(int trem, ADC *ADC)
 {
-  int leituraADC = ADC->getIntValue();
-  return (leituraADC % 10) + 1;
+  float leituraADC = ADC->getPercentValue() / 100.0;
+  //printf("Leitura: %f\n", leituraADC);
+  //return (leituraADC % 10) + 1;
+  return leituraADC;
 }
 
 void *trem1(void *arg)
@@ -327,7 +331,7 @@ void *socketServer(void *arg)
 
   struct ip_mreq mreq; // para endereco multicast
 
-  unsigned short porta = 8109;
+  unsigned short porta = 9000;
 
   if ((server_sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) // cria um novo socket
   {
@@ -358,18 +362,23 @@ void *socketServer(void *arg)
   printf(" IPPROTO_IP = %d\n", IPPROTO_IP);
   printf(" SOL_SOCKET = %d\n", SOL_SOCKET);
   printf(" IP_ADD_MEMBERSHIP = %d \n", IP_ADD_MEMBERSHIP);
-
+  float floatArray[4];
   while (1)
   {
 
     printf("Servidor esperando ...\n");
 
     client_len = sizeof(client_address);
-    if (recvfrom(server_sockfd, &adcValues, sizeof(adcValues), 0,
+    if (recvfrom(server_sockfd, &floatArray, sizeof(floatArray), 0,
                  (struct sockaddr *)&client_address, &client_len) < 0)
     {
       perror(" erro no RECVFROM( )");
       exit(1);
+    }
+
+    for (int i = 0; i < 4; i++)
+    {
+      adcValues[i] = (int)(10 * floatArray[i]);
     }
     printf("\n Valor recebido foi = [%d %d %d %d]\n", adcValues[0], adcValues[1], adcValues[2], adcValues[3]);
   }
@@ -382,7 +391,7 @@ void *socketClient(void *arg)
   int sockfd;
   int len;
   struct sockaddr_in address;
-  unsigned short porta = 8109;
+  unsigned short porta = 9000;
 
   sockfd = socket(AF_INET, SOCK_DGRAM, 0); // criacao do socket
 
@@ -390,13 +399,13 @@ void *socketClient(void *arg)
   address.sin_addr.s_addr = inet_addr(MULTICAST_ADDR);
   address.sin_port = htons(porta);
   len = sizeof(address);
-  int adcValues[4];
+  float adcValues[4];
   ADC trens[] = {vel_trem1, vel_trem2, vel_trem3, vel_trem4};
   while (1)
   {
     for (int i = 0; i < 4; i++)
       adcValues[i] = normalizeAdc(i + 1, &trens[i]);
-    printf("\nenviando = [ %d %d %d %d ]\n", adcValues[0], adcValues[1], adcValues[2], adcValues[3]);
+    printf("\nenviando = [ %f %f %f %f ]\n", adcValues[0], adcValues[1], adcValues[2], adcValues[3]);
     sendto(sockfd, &adcValues, sizeof(adcValues), 0, (struct sockaddr *)&address, len);
     sleep(1);
   }
